@@ -62,6 +62,20 @@
     .glance-tile .icon { font-size: 34px; line-height: 1; }
     .glance-tile .name { color: #f8fafc; font-size: 18px; font-weight: 850; line-height: 1; }
     .glance-tile .dist { color: #fff; font-size: 30px; font-weight: 900; line-height: 1; margin-top: 4px; }
+    .glance-tile .meta { color: #cbd5e1; font-size: 15px; font-weight: 800; margin-top: 5px; line-height: 1.15; }
+    .glance-tile .meta.open { color: var(--green); }
+    .glance-tile .meta.closed { color: var(--red); }
+    .glance-next { padding: 12px 14px; }
+    .glance-next-title { color: var(--accent); font-size: 15px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .glance-next-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid #263240; }
+    .glance-next-row:first-of-type { border-top: 0; }
+    .glance-next-name { color: #fff; font-size: 22px; font-weight: 900; line-height: 1.05; }
+    .glance-next-sub { color: #cbd5e1; font-size: 17px; font-weight: 800; margin-top: 3px; }
+    .glance-next-eta { color: var(--accent); font-size: 22px; font-weight: 900; text-align: right; white-space: nowrap; }
+    .glance-next-status { font-size: 15px; font-weight: 900; text-align: right; margin-top: 3px; text-transform: uppercase; }
+    .glance-next-status.open { color: var(--green); }
+    .glance-next-status.closed { color: var(--red); }
+    .glance-next-status.unknown { color: #cbd5e1; }
     .route-strip { padding: 10px 12px 12px; }
     .route-strip-top { display: flex; justify-content: space-between; color: #cbd5e1; font-size: 14px; font-weight: 800; margin-bottom: 8px; }
     .route-line { position: relative; height: 28px; margin: 0 8px; }
@@ -204,9 +218,14 @@
     </div>
 
     <div class="glance-quick-grid">
-      <div class="glance-card glance-tile"><div class="icon">💧</div><div><div class="name">Eau</div><div id="glance-water-distance" class="dist">—</div></div></div>
-      <div class="glance-card glance-tile"><div class="icon">🥖</div><div><div class="name">Solide</div><div id="glance-food-distance" class="dist">—</div></div></div>
-      <div class="glance-card glance-tile"><div class="icon">🔧</div><div><div class="name">Service</div><div id="glance-service-distance" class="dist">—</div></div></div>
+      <div class="glance-card glance-tile"><div class="icon">💧</div><div><div class="name">Eau</div><div id="glance-water-distance" class="dist">—</div><div id="glance-water-meta" class="meta">—</div></div></div>
+      <div class="glance-card glance-tile"><div class="icon">🥖</div><div><div class="name">Solide</div><div id="glance-food-distance" class="dist">—</div><div id="glance-food-meta" class="meta">—</div></div></div>
+      <div class="glance-card glance-tile"><div class="icon">🔧</div><div><div class="name">Service</div><div id="glance-service-distance" class="dist">—</div><div id="glance-service-meta" class="meta">—</div></div></div>
+    </div>
+
+    <div class="glance-card glance-next">
+      <div class="glance-next-title">3 prochains POIs</div>
+      <div id="glance-next-list"></div>
     </div>
 
     <div class="glance-card route-strip">
@@ -1011,11 +1030,61 @@ function updatePaceState({
       if (el) el.textContent = text;
     }
 
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    function statusText(status) {
+      return {open: "Ouvert", closed: "Ferm\u00E9", unknown: "Inconnu"}[status] || "Inconnu";
+    }
+
     function setGlanceStatus(status) {
       const el = document.getElementById("glance-primary-status");
-      const labels = {open: "Ouvert", closed: "Ferm\u00E9", unknown: "Inconnu"};
-      el.textContent = labels[status] || "Inconnu";
+      el.textContent = statusText(status);
       el.className = "glance-status " + (status || "unknown");
+    }
+
+    function poiTiming(curKm, p) {
+      const etaH = computeEtaHours(curKm, p.route_km);
+      const arrival = new Date(Date.now() + etaH * 3600 * 1000);
+      const status = formatStatus(parseOpeningHours(p.opening_hours), arrival);
+      return {etaH, arrival, status};
+    }
+
+    function setTileMeta(id, p, curKm) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = "meta";
+      if (!p) {
+        el.textContent = "aucun";
+        return;
+      }
+      const t = poiTiming(curKm, p);
+      el.textContent = formatClock(t.arrival) + " \u2022 " + statusText(t.status);
+      el.classList.add(t.status);
+    }
+
+    function renderGlanceNextList(curKm, scored) {
+      const el = document.getElementById("glance-next-list");
+      if (!el) return;
+      const upcoming = scored.filter(p => p.dist_ahead >= -0.5).slice(0, 3);
+      if (!upcoming.length) {
+        el.innerHTML = '<div class="glance-next-sub">Aucun POI \u00E0 venir.</div>';
+        return;
+      }
+      el.innerHTML = upcoming.map(p => {
+        const t = poiTiming(curKm, p);
+        return '<div class="glance-next-row">' +
+          '<div>' +
+            '<div class="glance-next-name">' + (POI_ICONS[p.category] || "\u{1F4CD}") + " " + escapeHtml(p.name) + '</div>' +
+            '<div class="glance-next-sub">dans ' + formatDistanceKm(p.dist_ahead) + ' \u2022 km ' + p.route_km.toFixed(1) + ' \u2022 +' + formatHm(t.etaH) + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="glance-next-eta">' + formatClock(t.arrival) + '</div>' +
+            '<div class="glance-next-status ' + t.status + '">' + statusText(t.status) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join("");
     }
 
     function renderRouteStrip(curKm, scored) {
@@ -1062,6 +1131,10 @@ function updatePaceState({
       setText("glance-water-distance", water ? formatDistanceKm(water.dist_ahead) : "\u2014");
       setText("glance-food-distance", food ? formatDistanceKm(food.dist_ahead) : "\u2014");
       setText("glance-service-distance", service ? formatDistanceKm(service.dist_ahead) : "\u2014");
+      setTileMeta("glance-water-meta", water, curKm);
+      setTileMeta("glance-food-meta", food, curKm);
+      setTileMeta("glance-service-meta", service, curKm);
+      renderGlanceNextList(curKm, scored);
 
       if (!primary) {
         setText("glance-primary-icons", "\u2014");
