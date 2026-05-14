@@ -7,6 +7,7 @@
   <title>Corsica 555 Race</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root {
       --bg: #0f1419;
@@ -184,6 +185,7 @@
 
   <div class="panel" style="padding: 8px 12px;">
     <div class="actions" style="margin-top: 0;">
+      <button id="btn-map-toggle">🗺️ Raster</button>
       <button id="btn-precache">📥 Pré-charger tuiles</button>
       <a href="https://owaka.live/555-corsica-2-2026" target="_blank" rel="noopener" class="btn-owaka">📡 Tracker officiel</a>
     </div>
@@ -200,6 +202,7 @@
   <div id="toast" class="toast"></div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
     globalThis.GRADE_SPEED_MODEL = {"name":"corsica_555_race_king_30h","description":"Terrain-aware moving speed model for Corsica 555 planning: Race King 2.2, no scheduled sleep, 30 h target.","grade_span_m":300,"brackets":[{"min_grade":6,"paved":9.0,"offroad":7.0},{"min_grade":3,"paved":13.0,"offroad":10.0},{"min_grade":1,"paved":19.0,"offroad":14.0},{"min_grade":-1,"paved":24.0,"offroad":18.0},{"min_grade":-3,"paved":29.0,"offroad":22.0},{"min_grade":-6,"paved":33.0,"offroad":22.0},{"min_grade":null,"paved":36.0,"offroad":22.0}]};
@@ -837,162 +840,150 @@ function updatePaceState({
       return activePoiFilters.has(poiFilterKey(p.category));
     }
 
-    // ===== Map (MapLibre GL) =====
-    const lats = TRACK.map(p => p.lat);
-    const lons = TRACK.map(p => p.lon);
-    const mapBounds = [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]];
-    const map = new maplibregl.Map({
-      container: "map",
-      style: STYLE_URL,
-      bounds: mapBounds,
-      fitBoundsOptions: {padding: 30}
-    });
-    map.addControl(new maplibregl.NavigationControl({showCompass: false}), "top-right");
-
-    // Returns [lon, lat] (GeoJSON order) for a given km along the route
-    function trackPointAtKm(km) {
-      if (km <= TRACK[0].km) return [TRACK[0].lon, TRACK[0].lat];
-      const last = TRACK[TRACK.length - 1];
-      if (km >= last.km) return [last.lon, last.lat];
-      let lo = 0, hi = TRACK.length - 1;
-      while (lo + 1 < hi) {
-        const mid = (lo + hi) >> 1;
-        if (TRACK[mid].km <= km) lo = mid;
-        else hi = mid;
-      }
-      const a = TRACK[lo], b = TRACK[hi];
-      const span = b.km - a.km;
-      const ratio = span > 0 ? (km - a.km) / span : 0;
-      return [a.lon + ratio * (b.lon - a.lon), a.lat + ratio * (b.lat - a.lat)];
-    }
-
-    // Returns [[lon, lat], ...] coordinates for a km range
-    function polylineForKmRange(startKm, endKm) {
-      const pts = [trackPointAtKm(startKm)];
-      for (const p of TRACK) {
-        if (p.km > startKm && p.km < endKm) pts.push([p.lon, p.lat]);
-      }
-      pts.push(trackPointAtKm(endKm));
-      return pts;
-    }
-
+    // ===== Dual-engine Map (MapLibre GL + Leaflet) =====
     const POI_ICONS = {
       WATER: "\u{1F4A7}", BAKERY: "\u{1F956}", CAFE: "\u2615", SUPERMARKET: "\u{1F6D2}", CONVENIENCE: "\u{1F3EA}",
       KIOSK: "\u{1F3EC}", ICE_CREAM: "\u{1F366}", FAST_FOOD: "\u{1F354}", RESTAURANT: "\u{1F37D}\uFE0F",
       TOILETS: "\u{1F6BB}", FUEL: "\u26FD", OTHER: "\u{1F4CD}"
     };
-    const poiMarkers = new Map();
-    const poiMarkersOnMap = new Set();
 
     function renderPoiPopup(p) {
       const ohRaw = p.opening_hours || "(horaires inconnus)";
       const cat = (p.category || "").toLowerCase();
-      return `<strong>${p.name}</strong><br>` +
-        `<small>${cat} — km ${p.route_km.toFixed(1)} (${p.match_distance_m.toFixed(0)}m off-route)</small><br>` +
-        `<small>Horaires: ${ohRaw}</small>`;
+      return "<strong>" + p.name + "</strong><br><small>" + cat + " \u2014 km " + p.route_km.toFixed(1) + " (" + p.match_distance_m.toFixed(0) + "m off-route)</small><br><small>Horaires: " + ohRaw + "</small>";
     }
 
-    // Create POI markers (not yet added to map)
-    POIS.forEach((p, index) => {
-      const el = document.createElement("div");
-      el.style.cssText = "font-size:18px;text-shadow:0 0 3px #000;cursor:pointer;line-height:1;";
-      el.textContent = POI_ICONS[p.category] || "\u{1F4CD}";
-      const popup = new maplibregl.Popup({offset: 12, closeButton: true}).setHTML(renderPoiPopup(p));
-      const marker = new maplibregl.Marker({element: el})
-        .setLngLat([p.lon, p.lat])
-        .setPopup(popup);
-      poiMarkers.set(index, marker);
-    });
-
-    // Create checkpoint markers (always visible)
-    for (const c of CHECKPOINTS) {
-      const el = document.createElement("div");
-      el.innerHTML = '<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">' + c.label.split(" ")[0] + "</div>";
-      const popup = new maplibregl.Popup({offset: 14, closeButton: false}).setHTML("<strong>" + c.label + "</strong><br>km " + c.km.toFixed(1));
-      new maplibregl.Marker({element: el})
-        .setLngLat([c.lon, c.lat])
-        .setPopup(popup)
-        .addTo(map);
+    function trackPointAtKm(km) {
+      if (km <= TRACK[0].km) return {lat: TRACK[0].lat, lon: TRACK[0].lon};
+      const last = TRACK[TRACK.length - 1];
+      if (km >= last.km) return {lat: last.lat, lon: last.lon};
+      let lo = 0, hi = TRACK.length - 1;
+      while (lo + 1 < hi) { const mid = (lo + hi) >> 1; if (TRACK[mid].km <= km) lo = mid; else hi = mid; }
+      const a = TRACK[lo], b = TRACK[hi], span = b.km - a.km, ratio = span > 0 ? (km - a.km) / span : 0;
+      return {lat: a.lat + ratio * (b.lat - a.lat), lon: a.lon + ratio * (b.lon - a.lon)};
     }
 
-    // Add route + surface layers once the style loads
-    map.on("load", () => {
-      // Route background line
-      map.addSource("route-bg", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          geometry: {
-            type: "LineString",
-            coordinates: TRACK.map(p => [p.lon, p.lat])
-          }
-        }
-      });
-      map.addLayer({
-        id: "route-bg",
-        type: "line",
-        source: "route-bg",
-        layout: {"line-cap": "round", "line-join": "round"},
-        paint: {"line-color": "#111827", "line-width": 7}
-      });
+    function polylineForKmRange(startKm, endKm) {
+      const pts = [trackPointAtKm(startKm)];
+      for (const p of TRACK) { if (p.km > startKm && p.km < endKm) pts.push({lat: p.lat, lon: p.lon}); }
+      pts.push(trackPointAtKm(endKm));
+      return pts;
+    }
 
-      // Surface segments as a FeatureCollection with filtered layers
-      const surfaceFeatures = [];
-      for (const range of SURFACE_RANGES) {
-        const coords = polylineForKmRange(range.start_km, range.end_km);
-        if (coords.length < 2) continue;
-        surfaceFeatures.push({
-          type: "Feature",
-          properties: {kind: range.kind},
-          geometry: {type: "LineString", coordinates: coords}
-        });
-      }
-      map.addSource("surface", {
-        type: "geojson",
-        data: {type: "FeatureCollection", features: surfaceFeatures}
-      });
-      map.addLayer({
-        id: "surface-paved",
-        type: "line",
-        source: "surface",
-        filter: ["==", ["get", "kind"], "paved"],
-        layout: {"line-cap": "round", "line-join": "round"},
-        paint: {"line-color": "#dc2626", "line-width": 4}
-      });
-      map.addLayer({
-        id: "surface-unpaved",
-        type: "line",
-        source: "surface",
-        filter: ["==", ["get", "kind"], "unpaved"],
-        layout: {"line-cap": "round", "line-join": "round"},
-        paint: {"line-color": "#f97316", "line-width": 5, "line-dasharray": [1, 4]}
-      });
-      map.addLayer({
-        id: "surface-unknown",
-        type: "line",
-        source: "surface",
-        filter: ["==", ["get", "kind"], "unknown"],
-        layout: {"line-cap": "round", "line-join": "round"},
-        paint: {"line-color": "#9ca3af", "line-width": 5, "line-dasharray": [0.5, 4]}
-      });
-    });
-
+    let mapEngine = localStorage.getItem("map-engine") || "leaflet";
+    let map = null;
     let currentPosMarker = null;
     let firstFix = true;
-    function setCurrentPosition(lat, lon, km, offTrackM, recenter) {
-      if (!currentPosMarker) {
-        const el = document.createElement("div");
-        el.style.cssText = "width:22px;height:22px;border-radius:50%;background:#34d399;border:3px solid #0f1419;box-shadow:0 0 0 3px rgba(52,211,153,0.45),0 2px 6px rgba(0,0,0,0.7);";
-        currentPosMarker = new maplibregl.Marker({element: el})
-          .setLngLat([lon, lat])
-          .addTo(map);
+    const poiMarkers = new Map();
+    const poiMarkersOnMap = new Set();
+    const SURFACE_STYLES_LF = {
+      paved: {color: "#dc2626", weight: 4, opacity: 0.92, lineCap: "round", lineJoin: "round"},
+      unpaved: {color: "#f97316", weight: 5, opacity: 1.0, dashArray: "2 8", lineCap: "round", lineJoin: "round"},
+      unknown: {color: "#9ca3af", weight: 5, opacity: 0.95, dashArray: "1 9", lineCap: "round", lineJoin: "round"}
+    };
+
+    function getMapView() {
+      if (!map) return {lat: TRACK[Math.floor(TRACK.length/2)].lat, lon: TRACK[Math.floor(TRACK.length/2)].lon, zoom: 10};
+      if (mapEngine === "leaflet") { const c = map.getCenter(); return {lat: c.lat, lon: c.lng, zoom: map.getZoom()}; }
+      else { const c = map.getCenter(); return {lat: c.lat, lon: c.lng, zoom: map.getZoom()}; }
+    }
+
+    function destroyMap() {
+      poiMarkers.clear(); poiMarkersOnMap.clear(); currentPosMarker = null;
+      if (map) { if (mapEngine === "leaflet") map.remove(); else map.remove(); map = null; }
+      document.getElementById("map").innerHTML = "";
+    }
+
+    function initMap(engine, view) {
+      destroyMap();
+      mapEngine = engine;
+      localStorage.setItem("map-engine", engine);
+      const btn = document.getElementById("btn-map-toggle");
+      btn.textContent = engine === "leaflet" ? "\u{1F5FA}\uFE0F Vectoriel" : "\u{1F5FA}\uFE0F Raster";
+
+      if (engine === "leaflet") {
+        map = L.map("map", {zoomControl: true, attributionControl: true});
+        if (view) map.setView([view.lat, view.lon], view.zoom);
+        else map.fitBounds(TRACK.map(p => [p.lat, p.lon]));
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 18, attribution: "\u00A9 <a href='https://www.openstreetmap.org/copyright'>OSM</a>"}).addTo(map);
+        L.polyline(TRACK.map(p => [p.lat, p.lon]), {color: "#111827", weight: 7, opacity: 0.9}).addTo(map);
+        for (const range of SURFACE_RANGES) {
+          const pts = polylineForKmRange(range.start_km, range.end_km).map(p => [p.lat, p.lon]);
+          if (pts.length < 2) continue;
+          L.polyline(pts, SURFACE_STYLES_LF[range.kind] || SURFACE_STYLES_LF.unknown).addTo(map);
+        }
+        for (const c of CHECKPOINTS) {
+          const icon = L.divIcon({className:"",html:'<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+c.label.split(" ")[0]+'</div>',iconSize:[28,28],iconAnchor:[14,14]});
+          L.marker([c.lat, c.lon], {icon}).addTo(map).bindPopup("<strong>"+c.label+"</strong><br>km "+c.km.toFixed(1));
+        }
+        POIS.forEach((p, index) => {
+          const icon = L.divIcon({className:"",html:'<div style="font-size:18px;text-shadow:0 0 3px #000;">'+(POI_ICONS[p.category]||"\u{1F4CD}")+'</div>',iconSize:[22,22],iconAnchor:[11,11]});
+          const m = L.marker([p.lat, p.lon], {icon}).bindPopup(renderPoiPopup(p));
+          poiMarkers.set(index, m);
+        });
       } else {
-        currentPosMarker.setLngLat([lon, lat]);
+        map = new maplibregl.Map({container: "map", style: STYLE_URL, center: view ? [view.lon, view.lat] : [TRACK[Math.floor(TRACK.length/2)].lon, TRACK[Math.floor(TRACK.length/2)].lat], zoom: view ? view.zoom : 8});
+        if (!view) map.fitBounds([[Math.min(...TRACK.map(p=>p.lon)), Math.min(...TRACK.map(p=>p.lat))], [Math.max(...TRACK.map(p=>p.lon)), Math.max(...TRACK.map(p=>p.lat))]], {padding: 30});
+        map.addControl(new maplibregl.NavigationControl({showCompass: false}), "top-right");
+        map.on("load", () => {
+          map.addSource("route-bg", {type:"geojson", data:{type:"Feature", geometry:{type:"LineString", coordinates:TRACK.map(p=>[p.lon,p.lat])}}});
+          map.addLayer({id:"route-bg", type:"line", source:"route-bg", layout:{"line-cap":"round","line-join":"round"}, paint:{"line-color":"#111827","line-width":7}});
+          const sf = SURFACE_RANGES.map(r => {const c=polylineForKmRange(r.start_km,r.end_km).map(p=>[p.lon,p.lat]); return c.length<2?null:{type:"Feature",properties:{kind:r.kind},geometry:{type:"LineString",coordinates:c}};}).filter(Boolean);
+          map.addSource("surface",{type:"geojson",data:{type:"FeatureCollection",features:sf}});
+          map.addLayer({id:"surface-paved",type:"line",source:"surface",filter:["==",["get","kind"],"paved"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#dc2626","line-width":4}});
+          map.addLayer({id:"surface-unpaved",type:"line",source:"surface",filter:["==",["get","kind"],"unpaved"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#f97316","line-width":5,"line-dasharray":[1,4]}});
+          map.addLayer({id:"surface-unknown",type:"line",source:"surface",filter:["==",["get","kind"],"unknown"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#9ca3af","line-width":5,"line-dasharray":[0.5,4]}});
+        });
+        for (const c of CHECKPOINTS) {
+          const el = document.createElement("div");
+          el.innerHTML = '<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+c.label.split(" ")[0]+'</div>';
+          new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).setPopup(new maplibregl.Popup({offset:14,closeButton:false}).setHTML("<strong>"+c.label+"</strong><br>km "+c.km.toFixed(1))).addTo(map);
+        }
+        POIS.forEach((p, index) => {
+          const el = document.createElement("div");
+          el.style.cssText = "font-size:18px;text-shadow:0 0 3px #000;cursor:pointer;line-height:1;";
+          el.textContent = POI_ICONS[p.category] || "\u{1F4CD}";
+          const m = new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).setPopup(new maplibregl.Popup({offset:12,closeButton:true}).setHTML(renderPoiPopup(p)));
+          poiMarkers.set(index, m);
+        });
       }
-      if (recenter) {
-        const zoom = firstFix ? 14 : Math.max(map.getZoom(), 13);
-        map.flyTo({center: [lon, lat], zoom: zoom});
-        firstFix = false;
+    }
+
+    function switchMapEngine() {
+      const view = getMapView();
+      const next = mapEngine === "leaflet" ? "maplibre" : "leaflet";
+      initMap(next, view);
+      render();
+    }
+
+    initMap(mapEngine);
+
+    function setCurrentPosition(lat, lon, km, offTrackM, recenter) {
+      if (mapEngine === "leaflet") {
+        if (!currentPosMarker) {
+          const icon = L.divIcon({className:"",html:'<div style="width:22px;height:22px;border-radius:50%;background:#34d399;border:3px solid #0f1419;box-shadow:0 0 0 3px rgba(52,211,153,0.45),0 2px 6px rgba(0,0,0,0.7);"></div>',iconSize:[22,22],iconAnchor:[11,11]});
+          currentPosMarker = L.marker([lat, lon], {icon, zIndexOffset: 1000}).addTo(map);
+        } else {
+          currentPosMarker.setLatLng([lat, lon]);
+        }
+        if (recenter) {
+          const z = firstFix ? 14 : Math.max(map.getZoom(), 13);
+          map.setView([lat, lon], z, {animate: true});
+          firstFix = false;
+        }
+      } else {
+        if (!currentPosMarker) {
+          const el = document.createElement("div");
+          el.style.cssText = "width:22px;height:22px;border-radius:50%;background:#34d399;border:3px solid #0f1419;box-shadow:0 0 0 3px rgba(52,211,153,0.45),0 2px 6px rgba(0,0,0,0.7);";
+          currentPosMarker = new maplibregl.Marker({element:el}).setLngLat([lon, lat]).addTo(map);
+        } else {
+          currentPosMarker.setLngLat([lon, lat]);
+        }
+        if (recenter) {
+          const z = firstFix ? 14 : Math.max(map.getZoom(), 13);
+          map.flyTo({center: [lon, lat], zoom: z});
+          firstFix = false;
+        }
       }
     }
 
@@ -1000,11 +991,7 @@ function updatePaceState({
       let lo = 0, hi = POLY_KM.length - 1;
       if (km <= POLY_KM[0].km) return TRACK[0].ele;
       if (km >= POLY_KM[hi].km) return TRACK[hi].ele;
-      while (lo + 1 < hi) {
-        const mid = (lo + hi) >> 1;
-        if (POLY_KM[mid].km <= km) lo = mid;
-        else hi = mid;
-      }
+      while (lo + 1 < hi) { const mid = (lo + hi) >> 1; if (POLY_KM[mid].km <= km) lo = mid; else hi = mid; }
       const t0 = POLY_KM[lo].km, t1 = POLY_KM[hi].km;
       if (t1 === t0) return TRACK[lo].ele;
       const r = (km - t0) / (t1 - t0);
@@ -1012,25 +999,30 @@ function updatePaceState({
     }
 
     function focusPoi(index) {
-      const p = POIS[index];
-      const marker = poiMarkers.get(index);
+      const p = POIS[index], marker = poiMarkers.get(index);
       if (!p) return;
-      map.flyTo({center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 15)});
-      if (marker) {
-        if (!poiMarkersOnMap.has(index)) {
-          marker.addTo(map);
-          poiMarkersOnMap.add(index);
-        }
-        marker.togglePopup();
+      if (mapEngine === "leaflet") {
+        map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15), {animate: true});
+        if (marker) { if (!map.hasLayer(marker)) marker.addTo(map); marker.openPopup(); }
+      } else {
+        map.flyTo({center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 15)});
+        if (marker) { if (!poiMarkersOnMap.has(index)) { marker.addTo(map); poiMarkersOnMap.add(index); } marker.togglePopup(); }
       }
     }
 
     function applyPoiMarkerVisibility(visibleIndexes) {
-      for (const [index, marker] of poiMarkers.entries()) {
-        const shouldShow = visibleIndexes.has(index);
-        const isShown = poiMarkersOnMap.has(index);
-        if (shouldShow && !isShown) { marker.addTo(map); poiMarkersOnMap.add(index); }
-        if (!shouldShow && isShown) { marker.remove(); poiMarkersOnMap.delete(index); }
+      if (mapEngine === "leaflet") {
+        for (const [index, marker] of poiMarkers.entries()) {
+          const show = visibleIndexes.has(index);
+          if (show && !map.hasLayer(marker)) marker.addTo(map);
+          if (!show && map.hasLayer(marker)) marker.remove();
+        }
+      } else {
+        for (const [index, marker] of poiMarkers.entries()) {
+          const show = visibleIndexes.has(index), on = poiMarkersOnMap.has(index);
+          if (show && !on) { marker.addTo(map); poiMarkersOnMap.add(index); }
+          if (!show && on) { marker.remove(); poiMarkersOnMap.delete(index); }
+        }
       }
     }
 
@@ -1408,7 +1400,7 @@ function updatePaceState({
 
     // ===== Tile pre-caching =====
     async function precacheTiles() {
-      if (!map.isStyleLoaded()) {
+      if (mapEngine === "maplibre" && !map.isStyleLoaded()) {
         showToast("Carte en cours de chargement\u2026", "warn");
         return;
       }
@@ -1421,7 +1413,8 @@ function updatePaceState({
       let done = 0;
       for (const z of zooms) {
         for (const p of points) {
-          map.jumpTo({center: [p.lon, p.lat], zoom: z});
+          if (mapEngine === "leaflet") map.setView([p.lat, p.lon], z, {animate: false});
+          else map.jumpTo({center: [p.lon, p.lat], zoom: z});
           done++;
           if (done % 5 === 0 || done === total) {
             showToast("Pr\u00E9-chargement: " + done + "/" + total, "info", 800);
@@ -1429,7 +1422,8 @@ function updatePaceState({
           await new Promise(r => setTimeout(r, 400));
         }
       }
-      map.fitBounds(mapBounds, {padding: 30});
+      if (mapEngine === "leaflet") map.fitBounds(TRACK.map(p => [p.lat, p.lon]));
+      else map.fitBounds([[Math.min(...TRACK.map(p=>p.lon)),Math.min(...TRACK.map(p=>p.lat))],[Math.max(...TRACK.map(p=>p.lon)),Math.max(...TRACK.map(p=>p.lat))]],{padding:30});
       showToast("Tuiles pr\u00E9-charg\u00E9es \u2713", "info", 3000);
     }
 
@@ -1441,6 +1435,7 @@ function updatePaceState({
     document.getElementById("btn-new-session").addEventListener("click", startNewSession);
     document.getElementById("btn-clear").addEventListener("click", clearHistory);
     document.getElementById("btn-precache").addEventListener("click", precacheTiles);
+    document.getElementById("btn-map-toggle").addEventListener("click", switchMapEngine);
     document.querySelectorAll("[data-poi-mode]").forEach(btn => {
       btn.addEventListener("click", () => setPoiMode(btn.dataset.poiMode));
     });
@@ -1458,11 +1453,8 @@ function updatePaceState({
     });
 
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        map.stop();
-      } else {
-        map.resize();
-      }
+      if (document.hidden) { if (mapEngine === "leaflet") {} else map.stop(); }
+      else { if (mapEngine === "leaflet") map.invalidateSize(); else map.resize(); }
     });
 
     // Initial render
