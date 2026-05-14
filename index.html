@@ -20,16 +20,67 @@
       --border: #2a3038;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    html, body { margin: 0; padding: 0; min-height: 100%; background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 18px; }
     body { display: flex; flex-direction: column; }
-    header { background: var(--bg2); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-    header h1 { font-size: 14px; margin: 0; }
-    .badges { display: flex; gap: 6px; font-size: 11px; }
-    .badge { padding: 2px 6px; border-radius: 3px; background: var(--border); }
+    header { background: #05070a; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; }
+    header h1 { font-size: 20px; margin: 0; letter-spacing: 0.01em; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .header-toggle { padding: 6px 10px; font-size: 15px; font-weight: 850; border-radius: 8px; background: #111827; }
+    .badges { display: flex; gap: 8px; font-size: 14px; font-weight: 700; }
+    .badge { padding: 4px 8px; border-radius: 6px; background: var(--border); }
     .badge.fresh { background: #065f46; color: #d1fae5; }
     .badge.stale { background: #7f1d1d; color: #fee2e2; }
     .badge.offline { background: #7f1d1d; color: #fee2e2; }
     .badge.online { background: #065f46; color: #d1fae5; }
+    .glance-dashboard { background: #05070a; padding: 12px; display: grid; gap: 10px; border-bottom: 1px solid var(--border); }
+    .glance-card { background: linear-gradient(180deg, #101923, #070b11); border: 1px solid #263240; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+    .glance-label { color: #cbd5e1; font-size: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .glance-position { padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    .glance-km { color: #fff; font-size: clamp(54px, 16vw, 78px); font-weight: 900; letter-spacing: -0.07em; line-height: 0.9; }
+    .glance-km .unit { color: #f8fafc; font-size: 0.46em; letter-spacing: -0.04em; margin-right: 6px; }
+    .glance-percent { color: #fff; font-size: clamp(38px, 10vw, 54px); font-weight: 900; letter-spacing: -0.04em; line-height: 0.95; text-align: right; }
+    .glance-percent span { display: block; color: #cbd5e1; font-size: 20px; letter-spacing: 0; }
+    .glance-offtrack { color: #fbbf24; font-size: 20px; font-weight: 850; margin-top: 8px; }
+    .glance-offtrack.warning { color: #fb7185; }
+    .glance-primary { padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+    .glance-main-title { color: var(--accent); font-size: 16px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .glance-poi-line { display: flex; align-items: center; gap: 12px; }
+    .glance-poi-icons { font-size: 42px; line-height: 1; min-width: 44px; }
+    .glance-poi-name { color: #fff; font-size: clamp(34px, 9vw, 48px); font-weight: 900; letter-spacing: -0.04em; line-height: 0.95; }
+    .glance-poi-distance { color: #f8fafc; font-size: 22px; font-weight: 800; margin-top: 4px; }
+    .glance-poi-distance strong { color: var(--accent); font-size: 1.28em; }
+    .glance-note { color: var(--accent); font-size: 19px; font-weight: 850; margin-top: 10px; }
+    .glance-eta { text-align: right; min-width: 112px; }
+    .glance-eta .time { color: #fff; font-size: 28px; font-weight: 900; line-height: 1.05; }
+    .glance-eta .duration { color: #cbd5e1; font-size: 18px; font-weight: 800; margin-top: 2px; }
+    .glance-status { display: inline-block; margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 19px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+    .glance-status.open { background: #166534; color: #dcfce7; }
+    .glance-status.closed { background: #7f1d1d; color: #fee2e2; }
+    .glance-status.unknown { background: #334155; color: #e2e8f0; }
+    .glance-quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .glance-tile { padding: 12px; min-height: 76px; display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; }
+    .glance-tile .icon { font-size: 34px; line-height: 1; }
+    .glance-tile .name { color: #f8fafc; font-size: 18px; font-weight: 850; line-height: 1; }
+    .glance-tile .dist { color: #fff; font-size: 30px; font-weight: 900; line-height: 1; margin-top: 4px; }
+    .route-strip { padding: 10px 12px 12px; }
+    .route-strip-top { display: flex; justify-content: space-between; color: #cbd5e1; font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+    .route-line { position: relative; height: 28px; margin: 0 8px; }
+    .route-line::before { content: ""; position: absolute; left: 0; right: 0; top: 13px; height: 4px; border-radius: 999px; background: #475569; }
+    .route-progress { position: absolute; left: 0; top: 13px; height: 4px; border-radius: 999px; background: var(--accent); }
+    .route-dot { position: absolute; top: 5px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: #60a5fa; border: 3px solid #e0f2fe; box-shadow: 0 0 0 3px rgba(96,165,250,0.25); }
+    .route-dot.current { background: var(--accent); border-color: #fef3c7; width: 24px; height: 24px; top: 3px; margin-left: -12px; }
+    .route-strip-labels { display: flex; justify-content: space-between; color: #cbd5e1; font-size: 13px; font-weight: 750; margin-top: 4px; }
+    .glance-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .glance-actions button { min-height: 62px; font-size: 22px; font-weight: 900; border-radius: 10px; }
+    .glance-actions .primary { color: #1a1100; }
+    body.map-mode .glance-dashboard { display: none; }
+    body.map-mode #map { height: calc(100vh - 58px); min-height: 560px; }
+    body.glance-mode #map { height: 42vh; min-height: 300px; }
+    @media (max-width: 390px) {
+      .glance-primary { grid-template-columns: 1fr; }
+      .glance-eta { text-align: left; }
+      .glance-quick-grid { grid-template-columns: 1fr; }
+    }
     .map-wrap { position: relative; }
     #map { height: 65vh; min-height: 300px; }
     .panel { background: var(--bg2); padding: 10px 12px; border-bottom: 1px solid var(--border); }
@@ -44,7 +95,7 @@
     .position-row .refresh-block button { padding: 12px 14px; }
     .ratio-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px; margin-top: 10px; }
     .ratio-row .v { font-size: 16px; font-weight: 600; }
-    button { background: #1f2937; color: var(--fg); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    button { background: #1f2937; color: var(--fg); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 15px; cursor: pointer; }
     button:hover { background: #2d3744; }
     button.primary { background: var(--accent); color: #1a1100; border-color: var(--accent); font-weight: 600; }
     button.danger { background: #7f1d1d; color: #fee2e2; border-color: #7f1d1d; }
@@ -110,14 +161,65 @@
     .maplibregl-ctrl-attrib a { color: var(--muted) !important; }
   </style>
 </head>
-<body>
+<body class="glance-mode">
   <header>
     <h1>Corsica 555 Race</h1>
-    <div class="badges">
-      <span id="badge-online" class="badge online">online</span>
-      <span id="badge-gps" class="badge">GPS —</span>
+    <div class="header-right">
+      <button id="btn-view-toggle-header" class="header-toggle" type="button">Carte</button>
+      <div class="badges">
+        <span id="badge-online" class="badge online">online</span>
+        <span id="badge-gps" class="badge">GPS —</span>
+      </div>
     </div>
   </header>
+
+  <section id="glance-dashboard" class="glance-dashboard" aria-label="Mode glance course">
+    <div class="glance-card glance-position">
+      <div>
+        <div class="glance-label">Position actuelle</div>
+        <div id="glance-km" class="glance-km"><span class="unit">km</span>—</div>
+        <div id="glance-offtrack" class="glance-offtrack">GPS en attente</div>
+      </div>
+      <div id="glance-percent" class="glance-percent">—<span>course</span></div>
+    </div>
+
+    <div class="glance-card glance-primary">
+      <div>
+        <div class="glance-main-title">Prochain ravito critique</div>
+        <div class="glance-poi-line">
+          <div id="glance-primary-icons" class="glance-poi-icons">—</div>
+          <div>
+            <div id="glance-primary-name" class="glance-poi-name">Aucun fix GPS</div>
+            <div id="glance-primary-distance" class="glance-poi-distance">Refresh GPS pour calculer</div>
+          </div>
+        </div>
+        <div id="glance-primary-note" class="glance-note">Mode très lisible pour consultations rapides.</div>
+      </div>
+      <div class="glance-eta">
+        <div class="glance-label">ETA</div>
+        <div id="glance-primary-eta" class="time">—</div>
+        <div id="glance-primary-duration" class="duration">—</div>
+        <div id="glance-primary-status" class="glance-status unknown">inconnu</div>
+      </div>
+    </div>
+
+    <div class="glance-quick-grid">
+      <div class="glance-card glance-tile"><div class="icon">💧</div><div><div class="name">Eau</div><div id="glance-water-distance" class="dist">—</div></div></div>
+      <div class="glance-card glance-tile"><div class="icon">🥖</div><div><div class="name">Solide</div><div id="glance-food-distance" class="dist">—</div></div></div>
+      <div class="glance-card glance-tile"><div class="icon">🔧</div><div><div class="name">Service</div><div id="glance-service-distance" class="dist">—</div></div></div>
+    </div>
+
+    <div class="glance-card route-strip">
+      <div class="route-strip-top"><span>Départ</span><span id="route-strip-km">km — / —</span><span>Arrivée</span></div>
+      <div id="route-line" class="route-line"></div>
+      <div id="route-strip-labels" class="route-strip-labels"><span>Trace</span><span>POIs à venir</span></div>
+    </div>
+
+    <div class="glance-actions">
+      <button class="primary" id="btn-glance-refresh">Refresh GPS</button>
+      <button id="btn-view-toggle">Mode carte</button>
+    </div>
+  </section>
 
   <div class="map-wrap">
     <div id="map"></div>
@@ -773,7 +875,7 @@ function updatePaceState({
     const CHECKPOINTS = [{"label":"D\u00e9part","km":0.0,"lat":41.62109,"lon":9.30365},{"label":"CP1 - Village de Ghisoni","km":163.979,"lat":42.103379,"lon":9.212704},{"label":"CP2 - village de Crocicchia","km":333.445,"lat":42.46815,"lon":9.352467},{"label":"Arriv\u00e9e","km":487.062,"lat":42.62896,"lon":9.46732}];
     const TOTAL_KM = TRACK[TRACK.length - 1].km;
     const IS_LOOP = false;
-    const START_TIME = null;
+    const START_TIME = "2026-05-29T07:00:00+02:00";
     const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
     function distAhead(curKm, targetKm) {
@@ -804,6 +906,7 @@ function updatePaceState({
     let poiMode = "next";
     const activePoiFilters = new Set(["WATER", "FOOD", "SERVICES"]);
     let rGlobal = recomputeRGlobalFromHistory(history);
+    let viewMode = localStorage.getItem("race-view-mode") || "glance";
 
     function recomputeRGlobalFromHistory(h) {
       let r = null;
@@ -840,12 +943,162 @@ function updatePaceState({
       return activePoiFilters.has(poiFilterKey(p.category));
     }
 
+    function resizeActiveMap() {
+      if (!map) return;
+      if (mapEngine === "leaflet") map.invalidateSize();
+      else map.resize();
+    }
+
+    function setViewMode(nextMode) {
+      viewMode = nextMode === "map" ? "map" : "glance";
+      document.body.classList.toggle("map-mode", viewMode === "map");
+      document.body.classList.toggle("glance-mode", viewMode !== "map");
+      localStorage.setItem("race-view-mode", viewMode);
+      const mainToggle = document.getElementById("btn-view-toggle");
+      const headerToggle = document.getElementById("btn-view-toggle-header");
+      if (mainToggle) mainToggle.textContent = viewMode === "map" ? "Mode glance" : "Mode carte";
+      if (headerToggle) headerToggle.textContent = viewMode === "map" ? "Glance" : "Carte";
+      setTimeout(resizeActiveMap, 60);
+    }
+
+    function toggleViewMode() {
+      setViewMode(viewMode === "map" ? "glance" : "map");
+    }
+
     // ===== Dual-engine Map (MapLibre GL + Leaflet) =====
     const POI_ICONS = {
       WATER: "\u{1F4A7}", BAKERY: "\u{1F956}", CAFE: "\u2615", SUPERMARKET: "\u{1F6D2}", CONVENIENCE: "\u{1F3EA}",
       KIOSK: "\u{1F3EC}", ICE_CREAM: "\u{1F366}", FAST_FOOD: "\u{1F354}", RESTAURANT: "\u{1F37D}\uFE0F",
       TOILETS: "\u{1F6BB}", FUEL: "\u26FD", OTHER: "\u{1F4CD}"
     };
+    const FOOD_CATEGORIES = new Set(["BAKERY", "CAFE", "SUPERMARKET", "CONVENIENCE", "KIOSK", "ICE_CREAM", "FAST_FOOD", "RESTAURANT"]);
+    const SERVICE_CATEGORIES = new Set(["TOILETS", "FUEL"]);
+
+    function formatDistanceKm(d) {
+      if (d === null || d === undefined || !isFinite(d)) return "\u2014";
+      const value = Math.max(0, d);
+      return (value < 10 ? value.toFixed(1) : value.toFixed(0)) + " km";
+    }
+
+    function computeEtaHours(curKm, targetKm) {
+      if (IS_LOOP && targetKm < curKm) {
+        const h1 = etaToTarget(curKm, TOTAL_KM, POLY_KM, CUM_PREDICTED_H, rGlobal);
+        const h2 = etaToTarget(0, targetKm, POLY_KM, CUM_PREDICTED_H, rGlobal);
+        return h1 + h2;
+      }
+      return etaToTarget(curKm, targetKm, POLY_KM, CUM_PREDICTED_H, rGlobal);
+    }
+
+    function scoredPoisFromKm(curKm) {
+      return POIS.map((p, index) => {
+        var o = {}; for (var k in p) o[k] = p[k];
+        o.poi_index = index;
+        o.dist_ahead = distAhead(curKm, p.route_km);
+        return o;
+      }).sort((a, b) => a.dist_ahead - b.dist_ahead);
+    }
+
+    function nextPoiByCategory(scored, predicate, minAhead) {
+      const min = minAhead === undefined ? -0.5 : minAhead;
+      for (const p of scored) {
+        if (p.dist_ahead >= min && predicate(p)) return p;
+      }
+      return null;
+    }
+
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function setGlanceStatus(status) {
+      const el = document.getElementById("glance-primary-status");
+      const labels = {open: "Ouvert", closed: "Ferm\u00E9", unknown: "Inconnu"};
+      el.textContent = labels[status] || "Inconnu";
+      el.className = "glance-status " + (status || "unknown");
+    }
+
+    function renderRouteStrip(curKm, scored) {
+      const el = document.getElementById("route-line");
+      if (!el) return;
+      const pct = Math.max(0, Math.min(100, (curKm / TOTAL_KM) * 100));
+      const upcoming = scored.filter(p => p.dist_ahead >= -0.5 && p.dist_ahead <= 120).slice(0, 4);
+      const dots = upcoming.map(p => {
+        const left = Math.max(0, Math.min(100, (p.route_km / TOTAL_KM) * 100));
+        return '<span class="route-dot" style="left:' + left.toFixed(2) + '%"></span>';
+      }).join("");
+      el.innerHTML = '<span class="route-progress" style="width:' + pct.toFixed(2) + '%"></span>' +
+        '<span class="route-dot current" style="left:' + pct.toFixed(2) + '%"></span>' + dots;
+      setText("route-strip-km", "km " + curKm.toFixed(1) + " / " + TOTAL_KM.toFixed(0));
+      const nextLabel = upcoming.length ? upcoming[0].name + " dans " + formatDistanceKm(upcoming[0].dist_ahead) : "Aucun POI proche";
+      setText("route-strip-labels", nextLabel);
+    }
+
+    function renderGlance() {
+      const last = history[history.length - 1];
+      const curKm = last ? last.km : 0;
+      const scored = scoredPoisFromKm(curKm);
+      const water = nextPoiByCategory(scored, p => p.category === "WATER");
+      const food = nextPoiByCategory(scored, p => FOOD_CATEGORIES.has(p.category));
+      const service = nextPoiByCategory(scored, p => SERVICE_CATEGORIES.has(p.category));
+      const primary = nextPoiByCategory(scored, p => p.category === "WATER" || FOOD_CATEGORIES.has(p.category)) || service || scored.find(p => p.dist_ahead >= -0.5) || null;
+
+      if (last) {
+        document.getElementById("glance-km").innerHTML = '<span class="unit">km</span>' + last.km.toFixed(1);
+        setText("glance-percent", ((last.km / TOTAL_KM) * 100).toFixed(0) + "%");
+        document.getElementById("glance-percent").insertAdjacentHTML("beforeend", "<span>course</span>");
+        const offEl = document.getElementById("glance-offtrack");
+        offEl.textContent = last.off_track_m > 100 ? "Hors trace " + last.off_track_m.toFixed(0) + " m" : "Sur trace, \u00E9cart " + last.off_track_m.toFixed(0) + " m";
+        offEl.classList.toggle("warning", last.off_track_m > 100);
+      } else {
+        document.getElementById("glance-km").innerHTML = '<span class="unit">km</span>\u2014';
+        setText("glance-percent", "\u2014");
+        document.getElementById("glance-percent").insertAdjacentHTML("beforeend", "<span>course</span>");
+        const offEl = document.getElementById("glance-offtrack");
+        offEl.textContent = "GPS en attente";
+        offEl.classList.remove("warning");
+      }
+
+      setText("glance-water-distance", water ? formatDistanceKm(water.dist_ahead) : "\u2014");
+      setText("glance-food-distance", food ? formatDistanceKm(food.dist_ahead) : "\u2014");
+      setText("glance-service-distance", service ? formatDistanceKm(service.dist_ahead) : "\u2014");
+
+      if (!primary) {
+        setText("glance-primary-icons", "\u2014");
+        setText("glance-primary-name", "Aucun POI");
+        setText("glance-primary-distance", "Pas de ravito \u00E0 venir");
+        setText("glance-primary-note", "V\u00E9rifier le roadbook papier/GPS.");
+        setText("glance-primary-eta", "\u2014");
+        setText("glance-primary-duration", "\u2014");
+        setGlanceStatus("unknown");
+        renderRouteStrip(curKm, scored);
+        return;
+      }
+
+      const etaH = computeEtaHours(curKm, primary.route_km);
+      const arrival = new Date(Date.now() + etaH * 3600 * 1000);
+      const status = formatStatus(parseOpeningHours(primary.opening_hours), arrival);
+      const sameGroup = primary.category === "WATER"
+        ? (p => p.category === "WATER")
+        : (FOOD_CATEGORIES.has(primary.category) ? (p => FOOD_CATEGORIES.has(p.category)) : (p => SERVICE_CATEGORIES.has(p.category)));
+      const afterPrimary = nextPoiByCategory(scored, sameGroup, primary.dist_ahead + 0.5);
+      let note = "Prochain point utile sur la trace.";
+      if (afterPrimary && afterPrimary.dist_ahead - primary.dist_ahead >= 25) {
+        const kind = primary.category === "WATER" ? "eau" : (FOOD_CATEGORIES.has(primary.category) ? "solide" : "service");
+        note = "Dernier " + kind + " connu avant " + formatDistanceKm(afterPrimary.dist_ahead - primary.dist_ahead) + ".";
+      } else if (!afterPrimary) {
+        note = "Aucun autre point similaire connu ensuite.";
+      }
+
+      setText("glance-primary-icons", POI_ICONS[primary.category] || "\u{1F4CD}");
+      setText("glance-primary-name", primary.name);
+      document.getElementById("glance-primary-distance").innerHTML = "dans <strong>" + formatDistanceKm(primary.dist_ahead) + "</strong>";
+      setText("glance-primary-note", note);
+      setText("glance-primary-eta", formatClock(arrival));
+      setText("glance-primary-duration", "+ " + formatHm(etaH));
+      setGlanceStatus(status);
+      renderRouteStrip(curKm, scored);
+    }
 
     function renderPoiPopup(p) {
       const ohRaw = p.opening_hours || "(horaires inconnus)";
@@ -1154,6 +1407,7 @@ function updatePaceState({
       }
 
       renderCheckpoints();
+      renderGlance();
       renderPois();
       renderHistory();
     }
@@ -1436,6 +1690,9 @@ function updatePaceState({
     document.getElementById("btn-clear").addEventListener("click", clearHistory);
     document.getElementById("btn-precache").addEventListener("click", precacheTiles);
     document.getElementById("btn-map-toggle").addEventListener("click", switchMapEngine);
+    document.getElementById("btn-glance-refresh").addEventListener("click", () => recordConsultation({forceGps: true}));
+    document.getElementById("btn-view-toggle").addEventListener("click", toggleViewMode);
+    document.getElementById("btn-view-toggle-header").addEventListener("click", toggleViewMode);
     document.querySelectorAll("[data-poi-mode]").forEach(btn => {
       btn.addEventListener("click", () => setPoiMode(btn.dataset.poiMode));
     });
@@ -1458,6 +1715,7 @@ function updatePaceState({
     });
 
     // Initial render
+    setViewMode(viewMode);
     render({recenter: history.length > 0});
     recordConsultation({forceGps: false, silent: true});
   </script>
