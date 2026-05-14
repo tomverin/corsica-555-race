@@ -1029,8 +1029,10 @@ function updatePaceState({
       if (el) el.textContent = text;
     }
 
+    const HTML_ESCAPE = {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
     function escapeHtml(s) {
-      return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+      const str = (s === null || s === undefined) ? "" : String(s);
+      return str.replace(/[&<>"']/g, c => HTML_ESCAPE[c]);
     }
 
     function statusText(status) {
@@ -1175,7 +1177,7 @@ function updatePaceState({
     function renderPoiPopup(p) {
       const ohRaw = p.opening_hours || "(horaires inconnus)";
       const cat = (p.category || "").toLowerCase();
-      return "<strong>" + p.name + "</strong><br><small>" + cat + " \u2014 km " + p.route_km.toFixed(1) + " (" + p.match_distance_m.toFixed(0) + "m off-route)</small><br><small>Horaires: " + ohRaw + "</small>";
+      return "<strong>" + escapeHtml(p.name) + "</strong><br><small>" + escapeHtml(cat) + " \u2014 km " + p.route_km.toFixed(1) + " (" + p.match_distance_m.toFixed(0) + "m off-route)</small><br><small>Horaires: " + escapeHtml(ohRaw) + "</small>";
     }
 
     function trackPointAtKm(km) {
@@ -1238,8 +1240,8 @@ function updatePaceState({
           L.polyline(pts, SURFACE_STYLES_LF[range.kind] || SURFACE_STYLES_LF.unknown).addTo(map);
         }
         for (const c of CHECKPOINTS) {
-          const icon = L.divIcon({className:"",html:'<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+c.label.split(" ")[0]+'</div>',iconSize:[28,28],iconAnchor:[14,14]});
-          L.marker([c.lat, c.lon], {icon}).addTo(map).bindPopup("<strong>"+c.label+"</strong><br>km "+c.km.toFixed(1));
+          const icon = L.divIcon({className:"",html:'<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+escapeHtml(c.label.split(" ")[0])+'</div>',iconSize:[28,28],iconAnchor:[14,14]});
+          L.marker([c.lat, c.lon], {icon}).addTo(map).bindPopup("<strong>"+escapeHtml(c.label)+"</strong><br>km "+c.km.toFixed(1));
         }
         POIS.forEach((p, index) => {
           const icon = L.divIcon({className:"",html:'<div style="font-size:18px;text-shadow:0 0 3px #000;">'+(POI_ICONS[p.category]||"\u{1F4CD}")+'</div>',iconSize:[22,22],iconAnchor:[11,11]});
@@ -1261,8 +1263,8 @@ function updatePaceState({
         });
         for (const c of CHECKPOINTS) {
           const el = document.createElement("div");
-          el.innerHTML = '<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+c.label.split(" ")[0]+'</div>';
-          new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).setPopup(new maplibregl.Popup({offset:14,closeButton:false}).setHTML("<strong>"+c.label+"</strong><br>km "+c.km.toFixed(1))).addTo(map);
+          el.innerHTML = '<div style="background:#fbbf24;color:#1a1100;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #1a1100;">'+escapeHtml(c.label.split(" ")[0])+'</div>';
+          new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).setPopup(new maplibregl.Popup({offset:14,closeButton:false}).setHTML("<strong>"+escapeHtml(c.label)+"</strong><br>km "+c.km.toFixed(1))).addTo(map);
         }
         POIS.forEach((p, index) => {
           const el = document.createElement("div");
@@ -1512,7 +1514,7 @@ function updatePaceState({
         const remaining = (remainingKm !== null) ? remainingKm.toFixed(1) + "km" : "\u2713";
         const thNote = isTheoretical && etaH !== null ? '<div class="small" style="opacity:0.7;">(th\u00E9orique)</div>' : "";
         return '<div class="checkpoint">' +
-          '<div class="lbl">' + c.label + '</div>' +
+          '<div class="lbl">' + escapeHtml(c.label) + '</div>' +
           '<div class="km">km ' + c.km.toFixed(1) + '</div>' +
           '<div class="arrival' + thCls + '">' + arrivalStr + '</div>' +
           '<div class="duration' + thCls + '">' + durationStr + '</div>' +
@@ -1563,14 +1565,14 @@ function updatePaceState({
           : "km " + p.route_km.toFixed(1) + " \u2022 dans " + p.dist_ahead.toFixed(1) + "km";
         return '<button type="button" class="list-item poi-row" data-poi-index="' + p.poi_index + '">' +
           '<div class="row1">' +
-            '<span class="name">' + (POI_ICONS[p.category] || "\u{1F4CD}") + " " + p.name + '</span>' +
+            '<span class="name">' + (POI_ICONS[p.category] || "\u{1F4CD}") + " " + escapeHtml(p.name) + '</span>' +
             '<span class="eta">' + formatClock(arrival) + '</span>' +
           '</div>' +
           '<div class="row2">' +
             '<span class="km-tag">' + distanceLabel + " \u2022 " + formatHm(etaH) + '</span>' +
             '<span class="' + statusCls + '">' + statusLbl + '</span>' +
           '</div>' +
-          '<div class="hours">' + oh + '</div>' +
+          '<div class="hours">' + escapeHtml(oh) + '</div>' +
           '</button>';
       }).join("");
       const poiList = document.getElementById("poi-list");
