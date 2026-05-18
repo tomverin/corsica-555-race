@@ -1,4 +1,4 @@
-const CACHE_APP = 'c555-app-v1778996809';
+const CACHE_APP = 'c555-app-v1779083979';
 const CACHE_TILES = 'c555-tiles-v1';
 const APP_SHELL = ['./index.html', './manifest.webmanifest'];
 
@@ -47,10 +47,15 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // App shell: cache-first
+  // App shell: network-first, fallback cache for offline race use.
   if (url.origin === self.location.origin) {
     e.respondWith(
-      caches.match(e.request).then(hit => hit || fetch(e.request))
+      fetch(e.request).then(resp => {
+        if (e.request.method === 'GET' && resp.ok) {
+          caches.open(CACHE_APP).then(c => c.put(e.request, resp.clone()));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request))
     );
     return;
   }
