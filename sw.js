@@ -1,4 +1,4 @@
-const CACHE_APP = 'c555-app-v1779083979';
+const CACHE_APP = 'c555-app-v1779442082';
 const CACHE_TILES = 'c555-tiles-v1';
 const APP_SHELL = ['./index.html', './manifest.webmanifest'];
 
@@ -47,18 +47,24 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // App shell: network-first, fallback cache for offline race use.
+  // App shell: cache-first for race use. The site is frozen at build time and
+  // must remain available even with unstable mountain/roaming connectivity.
   if (url.origin === self.location.origin) {
     e.respondWith(
-      fetch(e.request).then(resp => {
-        if (e.request.method === 'GET' && resp.ok) {
-          caches.open(CACHE_APP).then(c => c.put(e.request, resp.clone()));
-        }
-        return resp;
-      }).catch(() => caches.match(e.request))
+      caches.open(CACHE_APP).then(c =>
+        c.match(e.request).then(hit => {
+          if (hit) return hit;
+          return fetch(e.request).then(resp => {
+            if (e.request.method === 'GET' && resp.ok) c.put(e.request, resp.clone());
+            return resp;
+          });
+        })
+      )
     );
     return;
   }
-  // Everything else: network-first
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Everything else: cache-first when already seen, network fallback otherwise.
+  e.respondWith(
+    caches.match(e.request).then(hit => hit || fetch(e.request))
+  );
 });
