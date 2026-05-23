@@ -81,9 +81,9 @@
     .glance-next-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name eta" "sub status"; gap: 3px 10px; align-items: baseline; padding: 9px 0; border-top: 1px solid #263240; }
     .glance-next-row:first-of-type { border-top: 0; }
     .glance-next-name { grid-area: name; min-width: 0; color: #fff; font-size: clamp(21px, 5.5vw, 28px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .glance-next-sub { grid-area: sub; min-width: 0; color: #fff; font-size: clamp(19px, 5vw, 26px); font-weight: 900; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+    .glance-next-sub { grid-area: sub; min-width: 0; color: #fff; font-size: clamp(22px, 6.2vw, 30px); font-weight: 900; line-height: 1.08; letter-spacing: -0.02em; white-space: normal; overflow-wrap: anywhere; }
     .glance-next-eta { grid-area: eta; color: var(--accent); font-size: clamp(22px, 5.5vw, 28px); font-weight: 900; text-align: right; white-space: nowrap; }
-    .glance-next-status { grid-area: status; font-size: 16px; font-weight: 900; text-align: right; text-transform: uppercase; white-space: nowrap; }
+    .glance-next-status { grid-area: status; font-size: clamp(18px, 4.8vw, 24px); font-weight: 900; text-align: right; text-transform: uppercase; white-space: nowrap; align-self: end; }
     .glance-next-status.open { color: var(--green); }
     .glance-next-status.closed { color: var(--red); }
     .glance-next-status.unknown { color: #fff; }
@@ -1230,7 +1230,7 @@ function updatePaceState({
         return '<div class="glance-next-row">' +
             '<div class="glance-next-name">' + (POI_ICONS[p.category] || "\u{1F4CD}") + " " + escapeHtml(p.name) + '</div>' +
             '<div class="glance-next-eta">' + formatClock(t.arrival) + '</div>' +
-            '<div class="glance-next-sub">dans ' + formatDistanceKm(p.dist_ahead) + ' \u2022 km ' + p.route_km.toFixed(1) + ' \u2022 +' + formatHm(t.etaH) + '</div>' +
+            '<div class="glance-next-sub">' + formatDistanceKm(p.dist_ahead) + ' \u2022 km ' + p.route_km.toFixed(1) + ' \u2022 +' + formatHm(t.etaH) + '</div>' +
             '<div class="glance-next-status ' + t.status + '">' + statusText(t.status) + '</div>' +
         '</div>';
       }).join("");
