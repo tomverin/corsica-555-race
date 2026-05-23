@@ -1,4 +1,4 @@
-const CACHE_APP = 'c555-app-v1779442082';
+const CACHE_APP = 'c555-app-v1779528365';
 const CACHE_TILES = 'c555-tiles-v1';
 const APP_SHELL = ['./index.html', './manifest.webmanifest'];
 
